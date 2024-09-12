@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
-#ifndef AUR_AUR_HH_
-#define AUR_AUR_HH_
+#ifndef AUR_CLIENT_HH_
+#define AUR_CLIENT_HH_
 
 #include <functional>
 #include <memory>
 #include <string>
 
-#include "request.hh"
-#include "response.hh"
+#include "absl/functional/any_invocable.h"
+#include "aur/request.hh"
+#include "aur/response.hh"
 
 namespace aur {
 
-class Aur {
+class Client {
  public:
   template <typename ResponseType>
-  using ResponseCallback = std::function<int(ResponseWrapper<ResponseType>)>;
+  using ResponseCallback =
+      absl::AnyInvocable<int(absl::StatusOr<ResponseType>) &&>;
 
   using RpcResponseCallback = ResponseCallback<RpcResponse>;
   using RawResponseCallback = ResponseCallback<RawResponse>;
@@ -42,35 +44,35 @@ class Aur {
     std::string useragent;
   };
 
-  Aur() = default;
-  virtual ~Aur() = default;
+  static std::unique_ptr<Client> New(Client::Options options = {});
 
-  Aur(const Aur&) = delete;
-  Aur& operator=(const Aur&) = delete;
+  Client() = default;
+  virtual ~Client() = default;
 
-  Aur(Aur&&) = default;
-  Aur& operator=(Aur&&) = default;
+  Client(const Client&) = delete;
+  Client& operator=(const Client&) = delete;
 
-  // Asynchronously issue an RPC request. The callback will be invoked when the
-  // call completes.
+  Client(Client&&) = default;
+  Client& operator=(Client&&) = default;
+
+  // Asynchronously issue an RPC request using the REST API. The callback will
+  // be invoked when the call completes.
   virtual void QueueRpcRequest(const RpcRequest& request,
-                               const RpcResponseCallback& callback) = 0;
+                               RpcResponseCallback callback) = 0;
 
   // Asynchronously issue a raw request. The callback will be invoked when the
   // call completes.
   virtual void QueueRawRequest(const HttpRequest& request,
-                               const RawResponseCallback& callback) = 0;
+                               RawResponseCallback callback) = 0;
 
   // Clone a git repository.
   virtual void QueueCloneRequest(const CloneRequest& request,
-                                 const CloneResponseCallback& callback) = 0;
+                                 CloneResponseCallback callback) = 0;
 
   // Wait for all pending requests to complete. Returns non-zero if any request
   // failed or was cancelled by a callback.
   virtual int Wait() = 0;
 };
-
-std::unique_ptr<Aur> NewAur(Aur::Options options = Aur::Options());
 
 }  // namespace aur
 

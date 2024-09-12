@@ -66,7 +66,9 @@ Is the same as I<depends,makedepends> or I<^checkdepends>.
 
 When used with the B<search> and B<rawsearch> commands, change the search
 dimension. I<BY> must be one of I<name>, I<name-desc>, I<maintainer>,
-I<depends>, I<makedepends>, I<optdepends>, or I<checkdepends>.
+I<depends>, I<makedepends>, I<optdepends>, I<checkdepends>, I<submitter>,
+I<provides>, I<conflicts>, I<replaces>, I<keywords>, I<groups>, or
+I<comaintainers>.
 
 This option defaults to I<name-desc>.
 
@@ -156,6 +158,12 @@ the POSIX extended regex specification.
 B<NOTE>: the AUR does not actually support searching by regular expressions
 and support in auracle is implemented on a best-effort basis.
 
+=item B<resolve> I<TERMS>...
+
+Pass one to many dependency string arguments to perform a search query for
+packages that can satisfy the input dependencies. Dependency syntax follows
+that of pacman and makepkg, for example: I<auracle> or I<auracleE<gt>=21>.
+
 =item B<show> I<PACKAGES>...
 
 Pass one to many arguments to print source files for the given packages. The
@@ -197,9 +205,9 @@ day in dotted form.
 
 String array fields: B<{depends}>, B<{makedepends}>, B<{checkdepends}>,
 B<{optdepends}>, B<{conflicts}>, B<{provides}>, B<{replaces}>, B<{groups}>,
-B<{keywords}>, B<{licenses}>. These fields default to using a delimiter of two
-whitespace, but can be customized, e.g.  B<{depends:,}> to comma delimit the
-values of the depends field.
+B<{keywords}>, B<{licenses}>, B<{comaintainers}>. These fields default to using
+a delimiter of two whitespace, but can be customized, e.g.  B<{depends:,}> to
+comma delimit the values of the depends field.
 
 Example: recreating auracle's search output:
 

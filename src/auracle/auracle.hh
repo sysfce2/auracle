@@ -2,15 +2,17 @@
 #ifndef AURACLE_AURACLE_HH_
 #define AURACLE_AURACLE_HH_
 
-#include <set>
 #include <string>
 #include <vector>
 
-#include "aur/aur.hh"
-#include "dependency_kind.hh"
-#include "package_cache.hh"
-#include "pacman.hh"
-#include "sort.hh"
+#include "absl/container/btree_set.h"
+#include "aur/client.hh"
+#include "aur/request.hh"
+#include "auracle/dependency.hh"
+#include "auracle/dependency_kind.hh"
+#include "auracle/package_cache.hh"
+#include "auracle/pacman.hh"
+#include "auracle/sort.hh"
 
 namespace auracle {
 
@@ -58,9 +60,9 @@ class Auracle {
     sort::Sorter sorter =
         sort::MakePackageSorter("name", sort::OrderBy::ORDER_ASC);
     std::string format;
-    std::set<DependencyKind> resolve_depends = {DependencyKind::Depend,
-                                                DependencyKind::CheckDepend,
-                                                DependencyKind::MakeDepend};
+    absl::btree_set<DependencyKind> resolve_depends = {
+        DependencyKind::Depend, DependencyKind::CheckDepend,
+        DependencyKind::MakeDepend};
   };
 
   int BuildOrder(const std::vector<std::string>& args,
@@ -68,6 +70,8 @@ class Auracle {
   int Clone(const std::vector<std::string>& args,
             const CommandOptions& options);
   int Info(const std::vector<std::string>& args, const CommandOptions& options);
+  int Resolve(const std::vector<std::string>& arg,
+              const CommandOptions& options);
   int Show(const std::vector<std::string>& args, const CommandOptions& options);
   int RawInfo(const std::vector<std::string>& args,
               const CommandOptions& options);
@@ -84,25 +88,29 @@ class Auracle {
   struct PackageIterator {
     using PackageCallback = std::function<void(const aur::Package&)>;
 
-    PackageIterator(bool recurse, std::set<DependencyKind> resolve_depends,
+    PackageIterator(bool recurse,
+                    absl::btree_set<DependencyKind> resolve_depends,
                     PackageCallback callback)
         : recurse(recurse),
           resolve_depends(resolve_depends),
           callback(std::move(callback)) {}
 
     bool recurse;
-    std::set<DependencyKind> resolve_depends;
+    absl::btree_set<DependencyKind> resolve_depends;
 
     const PackageCallback callback;
     PackageCache package_cache;
   };
+
+  void ResolveMany(const std::vector<std::string>& depstrings,
+                   aur::Client::RpcResponseCallback callback);
 
   int GetOutdatedPackages(const std::vector<std::string>& args,
                           std::vector<aur::Package>* packages);
 
   void IteratePackages(std::vector<std::string> args, PackageIterator* state);
 
-  std::unique_ptr<aur::Aur> aur_;
+  std::unique_ptr<aur::Client> client_;
   Pacman* pacman_;
 };
 

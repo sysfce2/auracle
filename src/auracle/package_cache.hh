@@ -6,9 +6,11 @@
 #include <set>
 #include <utility>
 
+#include "absl/container/btree_set.h"
 #include "absl/container/flat_hash_map.h"
 #include "aur/package.hh"
-#include "dependency_kind.hh"
+#include "auracle/dependency.hh"
+#include "auracle/dependency_kind.hh"
 
 namespace auracle {
 
@@ -27,16 +29,19 @@ class PackageCache {
 
   const aur::Package* LookupByPkgname(const std::string& pkgname) const;
   const aur::Package* LookupByPkgbase(const std::string& pkgbase) const;
+  std::vector<const aur::Package*> FindDependencySatisfiers(
+      const Dependency& depstring) const;
 
   int size() const { return packages_.size(); }
 
   bool empty() const { return size() == 0; }
 
   using WalkDependenciesFn =
-      std::function<void(const std::string& name, const aur::Package* package,
+      std::function<void(const Dependency& dep, const aur::Package* package,
                          const std::vector<std::string>& dependency_path)>;
-  void WalkDependencies(const std::string& name, WalkDependenciesFn cb,
-                        const std::set<DependencyKind>& dependency_kinds) const;
+  void WalkDependencies(
+      const std::string& name, WalkDependenciesFn cb,
+      const absl::btree_set<DependencyKind>& dependency_kinds) const;
 
  private:
   std::vector<aur::Package> packages_;
@@ -51,6 +56,7 @@ class PackageCache {
   // invalidate our index maps.
   PackageIndex index_by_pkgname_;
   PackageIndex index_by_pkgbase_;
+  absl::flat_hash_map<std::string, std::vector<int>> index_by_provide_;
 };
 
 }  // namespace auracle

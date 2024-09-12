@@ -5,6 +5,7 @@ import auracle_test
 
 
 class TestRegexSearch(auracle_test.TestCase):
+
     def testFragmentTooShort(self):
         r = self.Auracle(['search', 'f'])
         self.assertNotEqual(0, r.process.returncode)
@@ -23,9 +24,9 @@ class TestRegexSearch(auracle_test.TestCase):
         self.assertEqual('auracle-git', r.process.stdout.decode().strip())
 
         self.assertCountEqual([
-            '/rpc?v=5&type=search&by=name-desc&arg=aurac',
-            '/rpc?v=5&type=search&by=name-desc&arg=le-git',
-            '/rpc?v=5&type=search&by=name-desc&arg=auracle',
+            '/rpc/v5/search/aurac?by=name-desc',
+            '/rpc/v5/search/le-git?by=name-desc',
+            '/rpc/v5/search/auracle?by=name-desc',
         ], r.request_uris)
 
 

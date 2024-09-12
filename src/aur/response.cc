@@ -1,35 +1,22 @@
 // SPDX-License-Identifier: MIT
-#include "response.hh"
+#include "aur/response.hh"
 
-#include "json_internal.hh"
+#include "aur/json_internal.hh"
+
+using nlohmann::json;
 
 namespace aur {
 
-void from_json(const nlohmann::json& j, RpcResponse& r) {
-  // clang-format off
-  static const auto& callbacks = *new CallbackMap<RpcResponse>{
-    { "type",         MakeValueCallback(&RpcResponse::type) },
-    { "error",        MakeValueCallback(&RpcResponse::error) },
-    { "resultcount",  MakeValueCallback(&RpcResponse::resultcount) },
-    { "version",      MakeValueCallback(&RpcResponse::version) },
-    { "results",      MakeValueCallback(&RpcResponse::results) },
-  };
-  // clang-format on
-
-  DeserializeJsonObject(j, callbacks, r);
-}
-
-// static
-RpcResponse::RpcResponse(const std::string& json_bytes) {
-  if (json_bytes.empty()) {
-    return;
-  }
-
+absl::StatusOr<RpcResponse> RpcResponse::Parse(std::string_view bytes) {
   try {
-    *this = nlohmann::json::parse(json_bytes);
+    const json j = json::parse(bytes);
+    if (const auto iter = j.find("error"); iter != j.end()) {
+      return absl::InvalidArgumentError(iter->get<std::string_view>());
+    }
+
+    return RpcResponse(j["results"].get<std::vector<Package>>());
   } catch (const std::exception& e) {
-    type = "error";
-    error = e.what();
+    return absl::UnknownError(e.what());
   }
 }
 

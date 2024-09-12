@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-#include "search_fragment.hh"
+#include "auracle/search_fragment.hh"
 
 #include <string.h>
 
@@ -7,10 +7,13 @@
 
 namespace auracle {
 
+namespace {
+
 // We know that the AUR will reject search strings shorter than 2 characters.
 constexpr std::string_view::size_type kMinCandidateSize = 2;
+constexpr std::string_view kRegexChars = R"(^.+*?$[](){}|\)";
 
-constexpr std::string_view regex_chars = R"(^.+*?$[](){}|\)";
+}  // namespace
 
 std::string_view GetSearchFragment(std::string_view input) {
   std::vector<std::string_view> candidates;
@@ -29,7 +32,7 @@ std::string_view GetSearchFragment(std::string_view input) {
       continue;
     }
 
-    auto span = input.find_first_of(regex_chars);
+    auto span = input.find_first_of(kRegexChars);
     if (span == input.npos) {
       span = input.size();
     } else if (span == 0) {
@@ -38,10 +41,9 @@ std::string_view GetSearchFragment(std::string_view input) {
     }
 
     // given 'cow?', we can't include w in the search
-    // Looking one character past the end of the candidate is safe because we
-    // know that our input is null delimited.
+    // see if a ? or * follows cand
     auto cand = input.substr(0, span);
-    if (cand[span] == '?' || cand[span] == '*') {
+    if (input.size() > span && (input[span] == '?' || input[span] == '*')) {
       cand.remove_suffix(1);
     }
 

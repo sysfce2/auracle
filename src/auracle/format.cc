@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
-#include "format.hh"
-
-#include <fmt/printf.h>
+#include "auracle/format.hh"
 
 #include <iomanip>
 #include <iostream>
 #include <string_view>
 
 #include "absl/time/time.h"
-#include "terminal.hh"
+#include "auracle/terminal.hh"
+#include "fmt/printf.h"
 
 namespace {
 
 template <typename T>
 struct Field {
-  Field(std::string_view name, const T& value) : name(name), value(value) {}
+  constexpr Field(std::string_view name, const T& value)
+      : name(name), value(value) {}
 
   const std::string_view name;
   const T& value;
@@ -54,12 +54,12 @@ FMT_BEGIN_NAMESPACE
 template <>
 struct formatter<absl::Time> {
   auto parse(fmt::format_parse_context& ctx) {
-    return parse_format_or_default(ctx, "%c", &tm_format);
+    return parse_format_or_default(ctx, absl::RFC3339_sec, &tm_format);
   }
 
   auto format(const absl::Time t, fmt::format_context& ctx) {
-    return format_to(ctx.out(), "{}",
-                     absl::FormatTime(tm_format, t, absl::LocalTimeZone()));
+    return fmt::format_to(
+        ctx.out(), "{}", absl::FormatTime(tm_format, t, absl::LocalTimeZone()));
   }
 
   std::string tm_format;
@@ -76,7 +76,7 @@ struct formatter<std::vector<T>> {
   auto format(const std::vector<T>& vec, fmt::format_context& ctx) {
     std::string_view sep;
     for (const auto& v : vec) {
-      format_to(ctx.out(), "{}{}", sep, v);
+      fmt::format_to(ctx.out(), "{}{}", sep, v);
       sep = delimiter_;
     }
 
@@ -85,14 +85,6 @@ struct formatter<std::vector<T>> {
 
  private:
   std::string delimiter_;
-};
-
-// Specialization to format Dependency objects
-template <>
-struct formatter<aur::Dependency> : formatter<std::string_view> {
-  auto format(const aur::Dependency& dep, fmt::format_context& ctx) {
-    return formatter<std::string_view>::format(dep.depstring, ctx);
-  }
 };
 
 template <typename T>
@@ -104,7 +96,11 @@ struct formatter<Field<T>> : formatter<std::string_view> {
       }
     }
 
-    return format_to(ctx.out(), "{:14s} : {}\n", f.name, f.value);
+    // The value is not guaranteed to be consteval in this context, so the
+    // format string has to be runtime evaluated. Icky, but at least this
+    // is fully under our control.
+    return fmt::format_to(ctx.out(), fmt::runtime("{:14s} : {}\n"), f.name,
+                          f.value);
   }
 };
 
@@ -113,7 +109,7 @@ FMT_END_NAMESPACE
 namespace format {
 
 void NameOnly(const aur::Package& package) {
-  fmt::print(terminal::Bold("{}\n"), package.name);
+  fmt::print("{}\n", terminal::Bold(package.name));
 }
 
 void Short(const aur::Package& package,
@@ -184,6 +180,7 @@ void Long(const aur::Package& package,
   fmt::print("{}", Field("Popularity", p.popularity));
   fmt::print("{}", Field("Maintainer",
                          p.maintainer.empty() ? "(orphan)" : p.maintainer));
+  fmt::print("{}", Field("Co-maintainers", p.comaintainers));
   fmt::print("{}", Field("Submitted", p.submitted));
   fmt::print("{}", Field("Last Modified", p.modified));
   if (p.out_of_date > absl::UnixEpoch()) {
@@ -206,10 +203,11 @@ void FormatCustomTo(std::string& out, std::string_view format,
                     const aur::Package& package) {
   // clang-format off
   fmt::format_to(
-      std::back_inserter(out), format,
+      std::back_inserter(out), fmt::runtime(format),
       fmt::arg("name", package.name),
       fmt::arg("description", package.description),
       fmt::arg("maintainer", package.maintainer),
+      fmt::arg("comaintainers", package.comaintainers),
       fmt::arg("version", package.version),
       fmt::arg("pkgbase", package.pkgbase),
       fmt::arg("url", package.upstream_url),

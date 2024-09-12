@@ -2,37 +2,21 @@
 #ifndef AUR_RESPONSE_HH_
 #define AUR_RESPONSE_HH_
 
-#include "absl/status/status.h"
-#include "package.hh"
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "absl/status/statusor.h"
+#include "aur/package.hh"
 
 namespace aur {
 
-template <typename ResponseT>
-class ResponseWrapper {
- public:
-  ResponseWrapper(ResponseT value, absl::Status status)
-      : value_(std::move(value)), status_(std::move(status)) {}
-
-  ResponseWrapper(const ResponseWrapper&) = delete;
-  ResponseWrapper& operator=(const ResponseWrapper&) = delete;
-
-  ResponseWrapper(ResponseWrapper&&) noexcept = default;
-  ResponseWrapper& operator=(ResponseWrapper&&) noexcept = default;
-
-  const ResponseT& value() const { return value_; }
-  ResponseT&& value() { return std::move(value_); }
-
-  const absl::Status& status() const { return status_; }
-  bool ok() const { return status_.ok(); }
-
- private:
-  ResponseT value_;
-  absl::Status status_;
-};
-
 struct CloneResponse {
-  explicit CloneResponse(std::string operation)
-      : operation(std::move(operation)) {}
+  static absl::StatusOr<CloneResponse> Parse(std::string_view operation) {
+    return CloneResponse(operation);
+  }
+
+  explicit CloneResponse(std::string_view operation) : operation(operation) {}
 
   CloneResponse(const CloneResponse&) = delete;
   CloneResponse& operator=(const CloneResponse&) = delete;
@@ -40,12 +24,13 @@ struct CloneResponse {
   CloneResponse(CloneResponse&&) = default;
   CloneResponse& operator=(CloneResponse&&) = default;
 
-  std::string operation;
+  std::string_view operation;
 };
 
 struct RpcResponse {
-  RpcResponse() = default;
-  explicit RpcResponse(const std::string& json_bytes);
+  static absl::StatusOr<RpcResponse> Parse(std::string_view bytes);
+
+  RpcResponse(std::vector<Package> packages) : packages(std::move(packages)) {}
 
   RpcResponse(const RpcResponse&) = delete;
   RpcResponse& operator=(const RpcResponse&) = delete;
@@ -53,14 +38,14 @@ struct RpcResponse {
   RpcResponse(RpcResponse&&) = default;
   RpcResponse& operator=(RpcResponse&&) = default;
 
-  std::string type;
-  std::string error;
-  int resultcount;
-  std::vector<Package> results;
-  int version;
+  std::vector<Package> packages;
 };
 
 struct RawResponse {
+  static absl::StatusOr<RawResponse> Parse(std::string bytes) {
+    return RawResponse(std::move(bytes));
+  }
+
   RawResponse(std::string bytes) : bytes(std::move(bytes)) {}
 
   RawResponse(const RawResponse&) = delete;

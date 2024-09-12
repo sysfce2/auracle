@@ -9,22 +9,6 @@
 
 namespace aur {
 
-struct Dependency {
-  enum class Mod {
-    ANY,
-    EQ,
-    GE,
-    GT,
-    LE,
-    LT,
-  };
-
-  std::string depstring;
-  std::string name;
-  std::string version;
-  Mod mod = Mod::ANY;
-};
-
 struct Package {
   Package() = default;
 
@@ -52,10 +36,11 @@ struct Package {
   std::vector<std::string> optdepends;
   std::vector<std::string> provides;
   std::vector<std::string> replaces;
+  std::vector<std::string> comaintainers;
 
-  std::vector<Dependency> depends;
-  std::vector<Dependency> makedepends;
-  std::vector<Dependency> checkdepends;
+  std::vector<std::string> depends;
+  std::vector<std::string> makedepends;
+  std::vector<std::string> checkdepends;
 };
 
 inline bool operator==(const Package& a, const Package& b) {

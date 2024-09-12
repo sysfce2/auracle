@@ -17,6 +17,7 @@ AUR_SERVER_VERSION = 5
 
 
 class FakeAurHandler(http.server.BaseHTTPRequestHandler):
+
     def do_GET(self):
         handlers = {
             '/rpc': self.handle_rpc,
@@ -28,7 +29,19 @@ class FakeAurHandler(http.server.BaseHTTPRequestHandler):
 
         for path, handler in handlers.items():
             if url.path.startswith(path):
-                return handler(url)
+                return handler('GET', url)
+
+        return self.respond(status_code=404)
+
+    def do_POST(self):
+        handlers = {
+            '/rpc': self.handle_rpc,
+        }
+        url = urllib.parse.urlparse(self.path)
+
+        for path, handler in handlers.items():
+            if url.path.startswith(path):
+                return handler('POST', url)
 
         return self.respond(status_code=404)
 
@@ -37,13 +50,17 @@ class FakeAurHandler(http.server.BaseHTTPRequestHandler):
         return l[-1] if l else None
 
     def make_json_reply(self, querytype, results=[], error=None):
-        return json.dumps({
+        response = {
             'version': AUR_SERVER_VERSION,
             'type': querytype,
             'resultcount': len(results),
             'results': results,
-            'error': error,
-        }).encode()
+        }
+
+        if error:
+            response['error'] = error
+
+        return json.dumps(response).encode()
 
     def make_package_reply(self, querytype, results):
         return self.make_json_reply(querytype, results)
@@ -91,20 +108,24 @@ class FakeAurHandler(http.server.BaseHTTPRequestHandler):
 
         return self.respond(response=reply)
 
-    def handle_rpc(self, url):
-        queryparams = urllib.parse.parse_qs(url.query)
-
-        rpc_type = self.last_of(queryparams.get('type', None))
-        if rpc_type == 'info':
-            return self.handle_rpc_info(set(queryparams.get('arg[]', [])))
-        elif rpc_type == 'search':
-            return self.handle_rpc_search(self.last_of(queryparams.get('arg')),
-                                          self.last_of(queryparams.get('by')))
+    def handle_rpc(self, command, url):
+        if command == 'GET':
+            queryparams = urllib.parse.parse_qs(url.query)
         else:
-            return self.respond(response=self.make_json_error_reply(
+            content_len = int(self.headers.get('Content-Length'))
+            queryparams = urllib.parse.parse_qs(
+                self.rfile.read(content_len).decode())
+
+        if url.path.startswith('/rpc/v5/search'):
+            return self.handle_rpc_search(
+                url.path.rsplit('/')[-1], self.last_of(queryparams.get('by')))
+        elif url.path.startswith('/rpc/v5/info'):
+            return self.handle_rpc_info(set(queryparams.get('arg[]', [])))
+        else:
+            return self.respond(response=self.make_error_reply(
                 'Incorrect request type specified.'))
 
-    def handle_download(self, url):
+    def handle_download(self, command, url):
         pkgname = os.path.basename(url.path).split('.')[0]
 
         # error injection for specific package name
@@ -127,7 +148,7 @@ class FakeAurHandler(http.server.BaseHTTPRequestHandler):
 
             return self.respond(headers=headers, response=response)
 
-    def handle_source_file(self, url):
+    def handle_source_file(self, command, url):
         queryparams = urllib.parse.parse_qs(url.query)
         pkgname = self.last_of(queryparams.get('h'))
 
@@ -155,7 +176,9 @@ class FakeAurHandler(http.server.BaseHTTPRequestHandler):
 
 
 def Serve(queue=None, port=0):
+
     class FakeAurServer(http.server.HTTPServer):
+
         def handle_error(self, request, client_address):
             raise
 

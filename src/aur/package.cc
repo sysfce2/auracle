@@ -1,54 +1,24 @@
 // SPDX-License-Identifier: MIT
-#include "package.hh"
+#include "aur/package.hh"
 
-#include "json_internal.hh"
+#include "absl/base/no_destructor.h"
+#include "aur/json_internal.hh"
 
-namespace aur {
+namespace absl {
 
-void from_json(const nlohmann::json& j, Dependency& d) {
-  d.depstring = j;
-
-  if (auto pos = d.depstring.find("<="); pos != std::string::npos) {
-    d.mod = Dependency::Mod::LE;
-    d.name = d.depstring.substr(0, pos);
-    d.version = d.depstring.substr(pos + 2);
-  } else if (auto pos = d.depstring.find(">="); pos != std::string::npos) {
-    d.mod = Dependency::Mod::GE;
-    d.name = d.depstring.substr(0, pos);
-    d.version = d.depstring.substr(pos + 2);
-  } else if (auto pos = d.depstring.find_first_of("<=>");
-             pos != std::string::npos) {
-    switch (d.depstring[pos]) {
-      case '<':
-        d.mod = Dependency::Mod::LT;
-        break;
-      case '>':
-        d.mod = Dependency::Mod::GT;
-        break;
-      case '=':
-        d.mod = Dependency::Mod::EQ;
-        break;
-    }
-
-    d.name = d.depstring.substr(0, pos);
-    d.version = d.depstring.substr(pos + 1);
-  } else {
-    d.name = d.depstring;
-  }
-}
-
-void from_json(const nlohmann::json& j, absl::Time& t) {
-  if (j.is_null()) {
-    return;
-  }
-
+void from_json(const nlohmann::json& j, Time& t) {
   t = absl::FromUnixSeconds(j);
 }
 
+}  // namespace absl
+
+namespace aur {
+
 void from_json(const nlohmann::json& j, Package& p) {
   // clang-format off
-  static const auto& callbacks = *new CallbackMap<Package>{
+  static const absl::NoDestructor<CallbackMap<Package>> kCallbacks({
     { "CheckDepends",     MakeValueCallback(&Package::checkdepends) },
+    { "CoMaintainers",    MakeValueCallback(&Package::comaintainers) },
     { "Conflicts",        MakeValueCallback(&Package::conflicts) },
     { "Depends",          MakeValueCallback(&Package::depends) },
     { "Description",      MakeValueCallback(&Package::description) },
@@ -72,10 +42,10 @@ void from_json(const nlohmann::json& j, Package& p) {
     { "URL",              MakeValueCallback(&Package::upstream_url) },
     { "URLPath",          MakeValueCallback(&Package::aur_urlpath) },
     { "Version",          MakeValueCallback(&Package::version) },
-  };
+  });
   // clang-format on
 
-  DeserializeJsonObject(j, callbacks, p);
+  DeserializeJsonObject(j, *kCallbacks, p);
 }
 
 }  // namespace aur

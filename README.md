@@ -1,5 +1,4 @@
 ![GitHub Actions status | falconindy/auracle](https://github.com/falconindy/auracle/workflows/arch.x86_64/badge.svg)
-![GitHub Actions status | falconindy/auracle](https://github.com/falconindy/auracle/workflows/arch.x86_64.asan/badge.svg)
 
 ## What is Auracle?
 
@@ -13,6 +12,7 @@ Auracle has a number of actions it can perform:
 * `search`: find packages in the AUR by regular expression.
 * `info`: return detailed information about packages.
 * `show`: show the contents of a source file for a package (e.g. the PKGBUILD)
+* `resolve`: find packages which provide dependencies.
 * `raw{info,search}`: similar to info and search, but output raw json responses
   rather than formatting them.
 * `clone`: clone the git repository for packages.
@@ -32,7 +32,7 @@ Auracle does not currently, and will probably never:
 
 Building auracle requires:
 
-* A C++17 compiler
+* A C++23 compiler
 * meson
 * libsystemd
 * libalpm
@@ -50,8 +50,8 @@ You're probably building this from the AUR, though, so just go use the
 If you're hacking on auracle, you can do this manually:
 
 ```sh
-$ meson build
-$ ninja -C build
+$ meson setup build
+$ meson compile -C build
 ```
 
 And running the tests is simply a matter of:

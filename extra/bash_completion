@@ -26,7 +26,9 @@ _auracle() {
         comps='always never auto'
         ;;
       '--searchby')
-        comps='name name-desc maintainer depends makedepends optdepends checkdepends'
+        comps='name name-desc maintainer depends makedepends optdepends
+               checkdepends submitter provides conflicts replaces
+               keywords groups maintainers'
         ;;
       '--sort'|'--rsort')
         comps="name votes popularity firstsubmitted lastmodified"
@@ -53,7 +55,7 @@ _auracle() {
   local -A VERBS=(
       [AUR_PACKAGES]='buildorder clone show info rawinfo'
     [LOCAL_PACKAGES]='outdated update'
-              [NONE]='search rawsearch'
+              [NONE]='search rawsearch resolve'
   )
 
   for ((i=0; i < COMP_CWORD; i++)); do

@@ -7,6 +7,7 @@ import textwrap
 
 
 class TestBuildOrder(auracle_test.TestCase):
+
     def testSinglePackage(self):
         r = self.Auracle(['buildorder', 'ocaml-configurator'])
         self.assertEqual(0, r.process.returncode)
@@ -120,6 +121,12 @@ class TestBuildOrder(auracle_test.TestCase):
         self.assertIn(
             'warning: found dependency cycle: [ python-fontpens -> python-fontparts -> python-fontpens ]',
             r.process.stderr.decode().strip().splitlines())
+
+    def testNoDependencies(self):
+        r = self.Auracle(['buildorder', 'mingw-w64-environment'])
+        self.assertEqual(0, r.process.returncode)
+        self.assertIn('TARGETAUR mingw-w64-environment mingw-w64-environment',
+                      r.process.stdout.decode().strip().splitlines())
 
 
 if __name__ == '__main__':
